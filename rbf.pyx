@@ -4,29 +4,18 @@ from libc.math cimport sqrt
 
 DTYPE = np.float64
 
-# 2D rbf evaluation at given points - "vectorised"
-# possible Cythonisation - increase speed by using static typing??
-@cython.boundscheck(False)  # Deactivate bounds checking
-@cython.wraparound(False)   # Deactivate negative indexing.
-def rbf_2(double d, double x0, double [:] y0, double xi, double yi):
-    # define some C vars to hold data
+# 2D rbf evaluation at given point
+cdef double rbf_2(double d, double x0, double y0, double xi, double yi):
+    # define some variables
     cdef double x, y, r, tmp
-    cdef int i
-    cdef int y_range = y0.size
 
-    # use memoryview of output
-    output_np = np.zeros(y0.size, dtype = DTYPE)
-    cdef double [:] output_c = output_np
-
-    # perform the calculation on the C array
+    # evaluate the RBF
     x = x0 - xi
-    for i in range(y_range):
-        y = y0[i] - yi
-        r = sqrt(x*x + y*y)
-        tmp = max(0, 1 - d*r)
-        output_c[i] = tmp*tmp*tmp*tmp*(4*d*r + 1)
+    y = y0 - yi
+    r = sqrt(x*x + y*y)
+    tmp = max(0, 1 - d*r)
 
-    return output_np
+    return tmp*tmp*tmp*tmp*(4*d*r + 1)
 
 
 # rbf evaluations at arbitrary test points -- for manufacture sol
@@ -38,15 +27,19 @@ def rbf_2_mat(double d, double [:] x0, double [:] y0, double [:] xi, double [:] 
     cdef int num_evals = x0.size
     cdef double x, y, r, tmp
 
-    # use memory view of output
+    # use memory view
     output_np = np.zeros([num_evals, num_centres], dtype = DTYPE)
     cdef double [:, :] output_c = output_np
+    cdef double [:] x0_c = x0
+    cdef double [:] y0_c = y0
+    cdef double [:] xi_c = xi
+    cdef double [:] yi_c = yi
 
     # perform the calculation on the C array
     for i in range(num_evals):
         for j in range(num_centres):
-            x = x0[i] - xi[j]
-            y = y0[i] - yi[j]
+            x = x0_c[i] - xi_c[j]
+            y = y0_c[i] - yi_c[j]
             r = sqrt(x*x + y*y)
             tmp = max(0, 1 - d*r)
             output_c[i,j] = (tmp*tmp*tmp*tmp) * (4*d*r + 1)
@@ -54,47 +47,27 @@ def rbf_2_mat(double d, double [:] x0, double [:] y0, double [:] xi, double [:] 
 
 
 # gradient components of the 2D basis functions
-@cython.boundscheck(False)  # Deactivate bounds checking
-@cython.wraparound(False)   # Deactivate negative indexing.
-def gradrbf_x(double d, double x0, double [:] y0, double xi, double yi):
-    # define some C vars to hold data
+cdef double gradrbf_x(double d, double x0, double y0, double xi, double yi):
+    # define some variables 
     cdef double x, y, r, tmp
-    cdef int i
-    cdef int y_range = y0.size
-
-    # use memoryview of output
-    output_np = np.zeros(y0.size, dtype = DTYPE)
-    cdef double [:] output_c = output_np
-
-    # perform the calculation on the C array
+    
+    # evaluate the gradient
     x = x0 - xi
-    for i in range(y0.size):
-        y = y0[i] - yi
-        r = sqrt(x*x + y*y)
-        tmp = max(0, 1 - d*r)
-        output_c[i] = -20*d*d*x*tmp*tmp*tmp
+    y = y0 - yi
+    r = sqrt(x*x + y*y)
+    tmp = max(0, 1 - d*r)
 
-    return output_np
+    return -20*d*d*x*tmp*tmp*tmp
 
 
-@cython.boundscheck(False)  # Deactivate bounds checking
-@cython.wraparound(False)   # Deactivate negative indexing.
-def gradrbf_y(double d, double x0, double [:] y0, double xi, double yi):
-    # define some C vars to hold data
+cdef double gradrbf_y(double d, double x0, double y0, double xi, double yi):
+    # define some variables
     cdef double x, y, r, tmp
-    cdef int i
-    cdef int y_range = y0.size
-
-    # use memoryview of output
-    output_np = np.zeros(y0.size, dtype = DTYPE)
-    cdef double [:] output_c = output_np
-
-    # perform the calculation on the C array
+    
+    # evaluate the gradient
     x = x0 - xi
-    for i in range(y0.size):
-        y = y0[i] - yi
-        r = sqrt(x*x + y*y)
-        tmp = max(0, 1 - d*r)
-        output_c[i] = -20*d*d*y*tmp*tmp*tmp
+    y = y0 - yi
+    r = sqrt(x*x + y*y)
+    tmp = max(0, 1 - d*r)
 
-    return output_np
+    return -20*d*d*y*tmp*tmp*tmp
