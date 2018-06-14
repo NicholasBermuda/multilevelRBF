@@ -2,7 +2,7 @@ import numpy as np
 import time
 from rbf import rbf_2_mat
 from quadrature import gauleg
-from build_mat import build_matrix_problem
+from build_mat import build_2d_matrix_problem
 import matplotlib.pyplot as plt
 from matplotlib import cm
 from mpl_toolkits.mplot3d import Axes3D
@@ -11,8 +11,8 @@ def main():
     start = time.time()
     # generate the centres -- this can easily be changed for different rectangular domains
     # needs more thought for non-rectangles!
-    N = 5
-    xcentres, ycentres = np.meshgrid(np.linspace(-1,1,N),np.linspace(-1,1,N))
+    N = 17
+    xcentres, ycentres = np.meshgrid(np.linspace(-1, 1, N),np.linspace(-1, 1, N))
     xcentres = xcentres.reshape(N*N,)
     ycentres = ycentres.reshape(N*N,)
 
@@ -26,10 +26,10 @@ def main():
     # rethink number of points as we do multilevel
 
     # pick a value for delta
-    delta = 0.7
+    delta = 1.183
 
     # make the full A
-    A_mat, rhs_vec = build_matrix_problem(N, xcentres, ycentres, pts, weights, f, delta)
+    A_mat, rhs_vec = build_2d_matrix_problem(N, xcentres, ycentres, pts, weights, f, delta)
     A_mat_full = A_mat + A_mat.transpose() - np.diag(np.diag(A_mat))
 
     # and solve the linear system
@@ -49,14 +49,14 @@ def main():
 
     # evaluate the basis functions and numerical soln at the same set of points
     RBF_vals = rbf_2_mat(delta, x_test_pts, y_test_pts, xcentres.reshape((N*N,)), ycentres.reshape((N*N,)))
-    numerical_sol = np.dot(RBF_vals,c)
-    rms_err = (exact_sol-numerical_sol)
-    rms_err_m = rms_err.reshape((test_pt_ct,test_pt_ct))
+    numerical_sol = np.dot(RBF_vals, c)
+    rms_err = (exact_sol - numerical_sol)
+    rms_err_m = rms_err.reshape((test_pt_ct, test_pt_ct))
 
     # find the error in the numerical solutions
-    print('RMS Error = {:.6E}'.format(np.linalg.norm(exact_sol-numerical_sol, 2)/test_pt_ct))
+    print('RMS Error = {:.6E}'.format(np.linalg.norm(exact_sol - numerical_sol, 2) / test_pt_ct))
     print('Maximum Error = {:.6E}'.format(np.linalg.norm(exact_sol - numerical_sol, np.inf)))
-    print('Total time taken was {:.3f} seconds'.format(time.time()-start))
+    print('Total time taken was {:.3f} seconds'.format(time.time() - start))
 
     # # should move the following to a plotting module
     # fig = plt.figure()

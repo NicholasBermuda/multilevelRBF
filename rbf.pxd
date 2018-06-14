@@ -1,3 +1,5 @@
 cdef double rbf_2(double d, double x0, double y0, double xi, double yi)
+cdef double rbf_1(double d, double r0, double ri)
 cdef double gradrbf_x(double d, double x0, double y0, double xi, double yi)
 cdef double gradrbf_y(double d, double x0, double y0, double xi, double yi)
+cdef double gradrbf_1(double d, double r0, double ri)
