@@ -1,7 +1,8 @@
 import numpy as np
+from forms import point_eval_1d, gradpoint_eval_1d
 from forms import a_integrand_2d_mat, F_integrand_2d_mat, F_integrand_1d_mat, a_integrand_1d_mat
 
-def build_2d_matrix_problem(N, xcentres, ycentres, pts, weights, f, delta):
+def build_2d_neumann_problem(N, xcentres, ycentres, pts, weights, f, delta):
     N2 = N * N
     rhs_vec = np.zeros(N2)
     A_mat = np.zeros((N2,N2))
@@ -32,12 +33,14 @@ def build_2d_matrix_problem(N, xcentres, ycentres, pts, weights, f, delta):
     return A_mat, rhs_vec
 
 
-def build_1d_matrix_problem(N, centres, pts, weights, f, delta):
+def build_1d_neumann_problem(N, centres, pts, weights, f, delta):
     rhs_vec = np.zeros(N)
     A_mat = np.zeros((N,N))
     for i in range(N):
         a = max(-1, centres[i] - 1.0/delta)
         b = min(1, centres[i] + 1.0/delta)
+        # a = max(-1, centres[i] - delta)
+        # b = min(1, centres[i] + delta)
         scale = (b - a)/2
         rhs_vec[i] = scale * np.einsum('i,i', F_integrand_1d_mat(scale*pts + (a + b)/2, centres[i], f, delta), weights)
         for j in range(i+1):
@@ -46,6 +49,8 @@ def build_1d_matrix_problem(N, centres, pts, weights, f, delta):
             else:
                 A = max(-1, max(centres[i], centres[j]) - 1./delta)
                 B = min(1, min(centres[i], centres[j]) + 1./delta)
+                # A = max(-1, max(centres[i], centres[j]) - delta)
+                # B = min(1, min(centres[i], centres[j]) + delta)
                 SCALE = (B - A)/2
                 bilin_mat = a_integrand_1d_mat(SCALE*pts + (A + B)/2, centres[i], centres[j], delta)
                 A_mat[i, j] = SCALE * np.einsum('i,i', bilin_mat, weights)
@@ -53,7 +58,44 @@ def build_1d_matrix_problem(N, centres, pts, weights, f, delta):
     return A_mat, rhs_vec
 
 
-def non_square_2d_matrix(xcentres1, ycentres1, xcentres2, ycentres2, pts, weights, delta):
+
+def build_1d_dirichlet_problem(N, centres, pts, weights, f, delta):
+    # homogeneous b.c. to start off, use the symmetric bilinear form and sigma to try to force coercivity
+    # theta = -1
+    sigma = 1000
+    rhs_vec = np.zeros(N)
+    A_mat = np.zeros((N,N))
+    for i in range(N): # for v discretisation
+        a = max(-1, centres[i] - 1.0/delta)
+        b = min(1, centres[i] + 1.0/delta)
+        scale = (b - a)/2
+        # rhs unchanged for homogeneous b.c.
+        rhs_vec[i] = scale * np.einsum('i,i', F_integrand_1d_mat(scale*pts + (a + b)/2, centres[i], f, delta), weights)
+        for j in range(i + 1): # for u discretisation
+            if abs(centres[i] - centres[j]) > 2./delta:
+                A_mat[i, j] = 0
+            else:
+                # first the bilinear form part
+                A = max(-1, max(centres[i], centres[j]) - 1./delta)
+                B = min(1, min(centres[i], centres[j]) + 1./delta)
+                SCALE = (B - A)/2
+                bilin_mat = a_integrand_1d_mat(SCALE*pts + (A + B)/2, centres[i], centres[j], delta)
+                A_mat[i, j] = SCALE * np.einsum('i,i', bilin_mat, weights)
+                # now the theta/sigma part
+                # - (u' v)(1) - (u v')(1)
+                A_mat[i, j] -= gradpoint_eval_1d(1.0, centres[j], delta)  * point_eval_1d(1.0, centres[i], delta)
+                A_mat[i, j] -= gradpoint_eval_1d(1.0, centres[i], delta)  * point_eval_1d(1.0, centres[j], delta)
+                # + (u' v)(-1) + (u v')(-1)
+                A_mat[i, j] += gradpoint_eval_1d(-1.0, centres[j], delta)  * point_eval_1d(-1.0, centres[i], delta)
+                A_mat[i, j] += gradpoint_eval_1d(-1.0, centres[i], delta)  * point_eval_1d(-1.0, centres[j], delta)
+                # + (sigma u v)(1) - (sigma u v)(-1)
+                A_mat[i, j] += sigma * point_eval_1d(1.0, centres[j], delta)  * point_eval_1d(1.0, centres[i], delta)
+                A_mat[i, j] += sigma * point_eval_1d(-1.0, centres[i], delta)  * point_eval_1d(-1.0, centres[j], delta)
+
+    return A_mat, rhs_vec
+
+
+def non_square_2d_neumann_matrix(xcentres1, ycentres1, xcentres2, ycentres2, pts, weights, delta):
     N1 = len(xcentres1)
     N2 = len(xcentres2)
     A_mat = np.zeros((N2, N1))

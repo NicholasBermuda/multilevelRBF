@@ -29,6 +29,7 @@ cdef double rbf_1(double d, double r0, double ri):
     return tmp*tmp*tmp*tmp*(4*d*r + 1)
 
 
+
 # rbf evaluations at arbitrary test points -- for manufacture sol
 @cython.boundscheck(False)  # Deactivate bounds checking
 @cython.wraparound(False)   # Deactivate negative indexing.

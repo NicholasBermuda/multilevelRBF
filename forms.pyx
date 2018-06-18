@@ -4,15 +4,6 @@ cimport cython
 
 DTYPE = np.float64
 
- # 2d bilinear form --  if we could get just the general form from the user
- # maybe we can abstract these parts away from the user into a "forms.py" module?
-# def a_integrand_2d(y0, x0, yi, xi, yj, xj, d):
-#     non_grad_term = rbf_2(d, x0, y0, xi, yi) * rbf_2(d, x0, y0, xj, yj)
-#     grad_x_term = gradrbf_x(d, x0, y0, xi, yi) * gradrbf_x(d, x0, y0, xj, yj)
-#     grad_y_term = gradrbf_y(d, x0, y0, xi, yi) * gradrbf_y(d, x0, y0, xj, yj)
-#     return grad_x_term + grad_y_term + non_grad_term
-
-
 @cython.boundscheck(False)  # Deactivate bounds checking
 @cython.wraparound(False)   # Deactivate negative indexing.
 # vectorised for matrix generation
@@ -100,13 +91,9 @@ def F_integrand_1d_mat(double [:] r0, double ri, f, double d):
     return outputmat_np
 
 
-# # 1d bilinear form
-# def a_integrand_1d(r0, ri, rj, rbf, grad_rbf, d):
-#     non_grad_term = rbf(d, r0, ri) * rbf(d, r0, rj)
-#     grad_term = grad_rbf(d, r0, ri) * grad_rbf(d, r0, rj)
-#     return grad_term + non_grad_term
+def point_eval_1d(double r0, double ri, double d):
+    return rbf_1(d, r0, ri)
 
 
-# # 1d linear form
-# def F_integrand_1d(r0, ri, rbf, f, d):
-#     return f(r0) * rbf(d, r0, ri)
+def gradpoint_eval_1d(double r0, double ri, double d):
+    return gradrbf_1(d, r0, ri)
