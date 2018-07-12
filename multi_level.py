@@ -2,20 +2,22 @@ import numpy as np
 import time
 from rbf import rbf_2_mat
 from quadrature import gauleg
-from build_mat import build_matrix_problem, non_square_matrix
+from build_mat import build_2d_neumann_problem, non_square_2d_neumann_matrix
 
-def main():
+def homogeneous_neumann():
     start = time.time()
     # first implement Algorithm 2 from (Wendland 1999)
     m = 3 # number of levels
     N = 5 # number of RBFs on the coarsest grid
     delta = 0.7 # RBF support on coarsest grid
 
+    bdy = [-1.0, 1.0, -1.0, 1.0]
+
     # forcing term
     f = lambda x, y: np.cos(np.pi*x)*np.cos(np.pi*y)
 
     # quadrature points and weights
-    pts, weights = gauleg(100)
+    pts, weights = gauleg(30)
 
     all_N = np.array([2**(i+2) + 1 for i in range(m)]) # all the Ns needed
      # all the deltas needed -- dunno if this is even a good set of choices but YOLO
@@ -28,7 +30,7 @@ def main():
     u = lambda x, y: np.cos(np.pi*x)*np.cos(np.pi*y)/(2*np.pi**2 + 1) # vectorised
 
     # evaluate the solution at a set of points
-    test_pt_ct = 300
+    test_pt_ct = 50
     test_grid = np.linspace(-1, 1, test_pt_ct)
     x_test_pts_g, y_test_pts_g = np.meshgrid(test_grid, test_grid)
     x_test_pts = x_test_pts_g.reshape(test_pt_ct**2, )
@@ -48,16 +50,16 @@ def main():
         this_delta = all_delta[k]
 
         # generate the rbf centres for this level
-        xcentres, ycentres = np.meshgrid(np.linspace(-1, 1, this_N), np.linspace(-1, 1, this_N))
+        xcentres, ycentres = np.meshgrid(np.linspace(bdy[0], bdy[1], this_N), np.linspace(bdy[2], bdy[3], this_N))
         xcentres = xcentres.reshape(this_N * this_N, )
         ycentres = ycentres.reshape(this_N * this_N, )
         
         # find uk in Vk with a(uk, v) = f(v) - a(v_{k-1}, v) forall v in Vk
         # i.e. solve c_k = A_k\(f_k - A_k-1*c_k-1)
-        A_k, rhs_k = build_matrix_problem(this_N, xcentres, ycentres, pts, weights, f, this_delta)
+        A_k, rhs_k = build_2d_neumann_problem(this_N, xcentres, ycentres, pts, weights, f, this_delta)
         A_k = A_k + A_k.transpose() - np.diag(np.diag(A_k))
         if k >= 1:
-            old_rect_A = non_square_matrix(old_xcentres, old_ycentres, xcentres, ycentres, pts, weights, this_delta)
+            old_rect_A = non_square_2d_neumann_matrix(old_xcentres, old_ycentres, xcentres, ycentres, pts, weights, this_delta)
         else:
             old_rect_A = 0
         c_k = np.linalg.solve(A_k, rhs_k - np.dot(old_rect_A, c_km1))
@@ -90,4 +92,4 @@ def main():
     return
 
 if __name__ == '__main__':
-    main()
+    homogeneous_neumann()
