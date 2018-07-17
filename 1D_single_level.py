@@ -50,6 +50,8 @@ def homogeneous_dirichlet():
     plt.plot(test_pts, numerical_sol)
     plt.show()
 
+    return
+
 
 def inhomogeneous_dirichlet():
     start = time.time()
@@ -99,6 +101,61 @@ def inhomogeneous_dirichlet():
     plt.plot(test_pts, numerical_sol)
     plt.show()
 
+    return
+
+
+def inhomogeneous_neumann():
+    start = time.time()
+    pi = np.pi
+
+    bdy = (-1., 1.)
+    bc = (-pi/(pi*pi + 1), -pi/(pi*pi +1))
+
+    # generate the centres
+    N = 9
+    centres = np.linspace(bdy[0], bdy[1], N)
+
+    # forcing term
+    f = lambda r: np.sin(pi*r)
+
+    # use Gauss-Legendre quadrature to integrate:
+    pts, weights = gauleg(30)
+
+    # pick a value for delta
+    delta = 0.7
+
+    # make the matrix system
+    A_mat, rhs_vec = build_1d_neumann_problem(N, centres, pts, weights, f, delta, bdy, bc)
+    A_mat_full = A_mat + A_mat.transpose() - np.diag(np.diag(A_mat))
+
+    # and solve the system
+    c = np.linalg.solve(A_mat_full, rhs_vec)
+    print('Condition number of stiffness matrix is {:.3E}'.format(np.linalg.cond(A_mat_full)))
+
+    # exact solution lambda function
+    u = lambda r: np.sin(pi*r)/(pi*pi + 1)
+
+    # evaluate the solution at a set of test points
+    test_pt_ct = 40
+    test_pts = np.linspace(-1, 1, test_pt_ct)
+    exact_sol = u(test_pts)
+
+    # evaluate the basis functions at the test points
+    RBF_vals = rbf_1_mat(delta, test_pts, centres)
+    numerical_sol = np.dot(RBF_vals, c)
+
+    # find the error in the numerical solutions
+    print('RMS Error = {:.6E}'.format(np.linalg.norm(exact_sol-numerical_sol, 2)/test_pt_ct))
+    print('Maximum Error = {:.6E}'.format(np.linalg.norm(exact_sol - numerical_sol, np.inf)))
+    print('Total time taken was {:.3f} seconds'.format(time.time()-start))
+
+    plt.plot(test_pts, exact_sol)
+    plt.plot(test_pts, numerical_sol)
+    plt.show()
+
+    return
+
+
 def homogeneous_neumann():
     start = time.time()
 
@@ -144,6 +201,8 @@ def homogeneous_neumann():
     plt.plot(test_pts, numerical_sol)
     plt.show()
 
+    return
+
 
 if __name__ == '__main__':
-    homogeneous_neumann()
+    inhomogeneous_neumann()
